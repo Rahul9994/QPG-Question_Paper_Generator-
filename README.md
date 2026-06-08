@@ -4,6 +4,27 @@ Generate high-quality multiple-choice question papers on any topic in seconds, p
 
 ---
 
+# 📸 Screenshots
+
+## Home Page
+
+<p align="center">
+  <img src="./screenshots/qpg-home.png" alt="QPG Home Page" width="100%">
+</p>
+
+### Preview
+
+The AI Question Paper Generator dashboard allows users to:
+
+- Select a topic or use quick topic chips
+- Choose difficulty level (Easy, Medium, Hard)
+- Select the number of questions
+- Generate MCQ papers instantly using OpenRouter AI
+- Access previously generated papers
+- Toggle between Dark and Light modes
+
+---
+
 ## ✨ Features
 
 - **OpenRouter-powered MCQ generation** — switch model with one env var
