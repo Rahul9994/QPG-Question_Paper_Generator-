@@ -208,5 +208,5 @@ PORT=5000
 ---
 
 ## 📄 License
-
-MIT — free to use, modify, and distribute.
+ free to use, modify, and distribute.
+ any collabborators and contributors are welcome
