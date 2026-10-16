@@ -1,27 +1,79 @@
 # 🧠 QPG — AI Question Paper Generator
 
+### 🔴 Live → **[qpg-questionpapergenerator.vercel.app](https://qpg-questionpapergenerator.vercel.app)**
+
 Generate high-quality multiple-choice question papers on any topic in seconds, powered by **Groq**. The backend reads the models your Groq key can use and automatically picks the best free one (currently GPT-OSS 120B), falling back to the next best if a model is rate-limited or retired.
+
+<p align="center">
+  <a href="https://qpg-questionpapergenerator.vercel.app">
+    <img src="./screenshots/hero.jpg" alt="QPG hero: a gold particle question paper beside the headline 'The art of the perfect question.'" width="100%">
+  </a>
+</p>
 
 ---
 
 # 📸 Screenshots
 
-## Home Page
+All screenshots are from the live site.
 
-<p align="center">
-  <img src="./screenshots/qpg-home.png" alt="QPG Home Page" width="100%">
-</p>
+### The 15-second reel
 
-### Preview
+The hero is a live WebGL film in five chapters that loops seamlessly. Gold particles move from dust to a sphere, then a question paper (above), then a score ring that draws a checkmark.
 
-The AI Question Paper Generator dashboard allows users to:
+<table>
+  <tr>
+    <td width="33%"><img src="./screenshots/reel-dust.jpg" alt="Chapter I, Noise: drifting gold dust"></td>
+    <td width="33%"><img src="./screenshots/reel-sphere.jpg" alt="Chapter II, Intelligence: a particle sphere with orbital rings"></td>
+    <td width="33%"><img src="./screenshots/reel-ring.jpg" alt="Chapter IV, Mastery: a gold score ring with a checkmark"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>I · Noise</sub></td>
+    <td align="center"><sub>II · Intelligence</sub></td>
+    <td align="center"><sub>IV · Mastery</sub></td>
+  </tr>
+</table>
 
-- Select a topic or use quick topic chips
-- Choose difficulty level (Easy, Medium, Hard)
-- Select the number of questions
-- Generate MCQ papers instantly using the best free Groq model
-- Access previously generated papers
-- Toggle between Dark and Light modes
+### Compose, attempt, master
+
+<table>
+  <tr>
+    <td width="50%"><img src="./screenshots/atelier.jpg" alt="The Atelier: subject, calibre and length, with a live specification sheet"></td>
+    <td width="50%"><img src="./screenshots/archive.jpg" alt="The Archive: paper cards with difficulty and best score"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>The Atelier</b>: pick a subject, a calibre and a length</sub></td>
+    <td align="center"><sub><b>The Archive</b>: every paper, with your best score</sub></td>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/quiz.jpg" alt="Quiz page with a sticky timer bar and an answer selected"></td>
+    <td><img src="./screenshots/score.jpg" alt="Score page: an 80% gold ring with the grade Distinction"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>The paper</b>: distraction-free, timed, tracked</sub></td>
+    <td align="center"><sub><b>The result</b>: score ring, grade and full review</sub></td>
+  </tr>
+  <tr>
+    <td><img src="./screenshots/method.jpg" alt="Pinned Method section showing step 02, Attempt"></td>
+    <td><img src="./screenshots/footer.jpg" alt="Footer with a large gold QPG wordmark"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>The Method</b>: a pinned, scroll-driven chapter</sub></td>
+    <td align="center"><sub><b>The finale</b>: parallax gold wordmark</sub></td>
+  </tr>
+</table>
+
+### Ivory theme & mobile
+
+<table>
+  <tr>
+    <td width="68%"><img src="./screenshots/ivory-atelier.jpg" alt="The Atelier in the light Ivory theme"></td>
+    <td width="32%"><img src="./screenshots/mobile-hero.jpg" alt="The hero film on a phone"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Ivory (light) theme</sub></td>
+    <td align="center"><sub>Mobile</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -197,7 +249,7 @@ PORT=5000
 
 ## ☁️ Deploy (Vercel)
 
-The repo deploys to Vercel as-is: the built frontend is served from the CDN and `/api/*` runs as one serverless function (`api/index.js`).
+Live at **https://qpg-questionpapergenerator.vercel.app**. The repo deploys to Vercel as-is: the built frontend is served from the CDN and `/api/*` runs as one serverless function (`api/index.js`).
 
 1. Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub and **Import** this repository. Leave every build setting at its default (`vercel.json` supplies them).
 2. Under **Environment Variables** add `GROQ_API_KEY` with your key (optionally `GROQ_MODEL` to pin a model, or `GENERATE_LIMIT_PER_15MIN` to change the per-visitor limit, default 12).
