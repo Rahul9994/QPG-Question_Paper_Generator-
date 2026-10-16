@@ -42,14 +42,14 @@ function PaperCard({ paper, index, onRetake, onDelete }) {
       viewport={{ once: true, amount: 0.2 }}
       exit={{ opacity: 0, scale: 0.94, filter: 'blur(6px)', transition: { duration: 0.4 } }}
       transition={{ duration: 1.1, ease: EASE, delay: (index % 3) * 0.08 }}
-      style={{ perspective: 1000 }}
+      style={{ perspective: 1000, height: '100%' }}
     >
       <motion.article
         ref={ref}
         onMouseMove={onMove}
         onMouseLeave={onLeave}
         className="glass glow-edge"
-        style={{ rotateX, rotateY, transformStyle: 'preserve-3d', padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 22, minHeight: 300 }}
+        style={{ rotateX, rotateY, transformStyle: 'preserve-3d', padding: '28px 28px 24px', display: 'flex', flexDirection: 'column', gap: 22, minHeight: 300, height: '100%' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span className="serif" style={{ fontStyle: 'italic', fontSize: 18, color: 'var(--gold)' }}>
