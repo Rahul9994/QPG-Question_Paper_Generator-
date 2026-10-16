@@ -1,38 +1,11 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import Icon from './Icon.jsx';
 
-export default function Timer({ formatted, label = 'Time' }) {
+export default function Timer({ formatted }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 7,
-        padding: '6px 13px',
-        borderRadius: 8,
-        background: 'var(--bg-surface)',
-        border: '1px solid var(--border)',
-      }}
-    >
-      <span style={{ fontSize: 14 }}>⏱</span>
-      <span
-        style={{
-          fontFamily: 'monospace',
-          fontSize: 14,
-          fontWeight: 600,
-          color: 'var(--text)',
-          letterSpacing: '0.04em',
-        }}
-      >
-        <AnimatePresence mode="popLayout">
-          <motion.span
-            key={formatted}
-            initial={{ opacity: 0.5, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            {formatted}
-          </motion.span>
-        </AnimatePresence>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ink-2)' }}>
+      <Icon name="clock" size={15} style={{ color: 'var(--gold)' }} />
+      <span className="serif tabular" style={{ fontSize: 22, fontWeight: 400, color: 'var(--ink)', letterSpacing: '0.04em', minWidth: 58 }}>
+        {formatted}
       </span>
     </div>
   );

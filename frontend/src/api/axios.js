@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 60000, // 60s — AI calls can be slow
+  timeout: 120000, // 120s — the backend may fall back through several Groq models
   headers: { 'Content-Type': 'application/json' },
 });
 

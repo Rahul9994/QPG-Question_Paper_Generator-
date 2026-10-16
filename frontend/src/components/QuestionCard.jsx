@@ -1,14 +1,9 @@
 import { useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import Icon from './Icon.jsx';
 
 const OPTIONS = ['A', 'B', 'C', 'D'];
-
-const OPTION_COLORS = {
-  A: { base: '#6366f1', soft: 'rgba(99,102,241,0.12)' },
-  B: { base: '#a78bfa', soft: 'rgba(167,139,250,0.12)' },
-  C: { base: '#22d3ee', soft: 'rgba(34,211,238,0.12)' },
-  D: { base: '#f59e0b', soft: 'rgba(245,158,11,0.12)' },
-};
+const EASE = [0.16, 1, 0.3, 1];
 
 export default function QuestionCard({
   question,
@@ -29,136 +24,86 @@ export default function QuestionCard({
     }
   }, [showError, selected]);
 
+  const flagged = showError && !selected;
+
   return (
-    <motion.div
+    <motion.article
       ref={cardRef}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="card"
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: 1.1, ease: EASE }}
       style={{
-        padding: '22px 24px',
-        marginBottom: 16,
-        borderColor: showError && !selected ? 'var(--danger)' : undefined,
-        boxShadow:
-          showError && !selected
-            ? '0 0 0 2px rgba(239,68,68,0.2)'
-            : undefined,
+        display: 'grid', gridTemplateColumns: 'minmax(44px, 72px) 1fr', gap: 'clamp(14px, 3vw, 36px)',
+        padding: 'clamp(30px, 5vw, 52px) 0', borderTop: `1px solid ${flagged ? 'var(--ruby)' : 'var(--line)'}`,
+        transition: 'border-color 0.4s',
       }}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
-        <span
-          style={{
-            width: 30,
-            height: 30,
-            minWidth: 30,
-            borderRadius: 8,
-            background: selected ? 'var(--primary-soft)' : 'var(--bg-surface)',
-            border: `1px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
-            color: selected ? 'var(--primary)' : 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 13,
-            transition: 'all 0.2s',
-          }}
-        >
-          {index + 1}
+      <div>
+        <span className="serif tabular" style={{ fontSize: 'clamp(30px, 4vw, 46px)', fontStyle: 'italic', fontWeight: 300, lineHeight: 1, color: selected ? 'var(--gold)' : 'var(--ink-3)', transition: 'color 0.5s' }}>
+          {String(index + 1).padStart(2, '0')}
         </span>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 15.5,
-            fontWeight: 500,
-            color: 'var(--text)',
-            lineHeight: 1.55,
-          }}
-        >
+      </div>
+
+      <div style={{ minWidth: 0 }}>
+        <p className="serif" style={{ margin: '0 0 26px', fontSize: 'clamp(22px, 2.3vw, 30px)', fontWeight: 400, lineHeight: 1.3, color: 'var(--ink)' }}>
           {question.question}
         </p>
-      </div>
 
-      {/* Options */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {OPTIONS.map((opt) => {
-          const isSelected = selected === opt;
-          const color = OPTION_COLORS[opt];
-
-          return (
-            <motion.button
-              key={opt}
-              whileHover={!disabled ? { x: 3 } : {}}
-              whileTap={!disabled ? { scale: 0.99 } : {}}
-              onClick={() => !disabled && onSelect(question.id, opt)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '11px 16px',
-                borderRadius: 9,
-                border: `1px solid ${isSelected ? color.base : 'var(--border-muted)'}`,
-                background: isSelected ? color.soft : 'var(--bg-surface)',
-                cursor: disabled ? 'default' : 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.17s ease',
-                boxShadow: isSelected ? `0 0 0 1px ${color.base}` : 'none',
-              }}
-            >
-              {/* Option badge */}
-              <span
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {OPTIONS.map((opt) => {
+            const isSelected = selected === opt;
+            return (
+              <button
+                key={opt}
+                onClick={() => !disabled && onSelect(question.id, opt)}
+                aria-pressed={isSelected}
                 style={{
-                  width: 26,
-                  height: 26,
-                  minWidth: 26,
-                  borderRadius: 6,
-                  background: isSelected ? color.base : 'var(--bg-card-2)',
-                  border: `1px solid ${isSelected ? color.base : 'var(--border)'}`,
-                  color: isSelected ? '#fff' : 'var(--text-dim)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  transition: 'all 0.17s',
-                  flexShrink: 0,
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 18, padding: '15px 20px',
+                  borderRadius: 'var(--radius)', textAlign: 'left',
+                  border: `1px solid ${isSelected ? 'var(--gold)' : 'var(--line)'}`,
+                  background: isSelected ? 'linear-gradient(100deg, var(--gold-soft), transparent 80%)' : 'transparent',
+                  boxShadow: isSelected ? '0 0 0 1px var(--gold-glow)' : 'none',
+                  cursor: disabled ? 'default' : 'pointer',
+                  transition: 'all 0.45s var(--ease-lux)',
                 }}
+                onMouseEnter={(e) => { if (!isSelected && !disabled) e.currentTarget.style.borderColor = 'var(--line-2)'; }}
+                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--line)'; }}
               >
-                {opt}
-              </span>
-              <span
-                style={{
-                  fontSize: 14,
-                  color: isSelected ? 'var(--text)' : 'var(--text-dim)',
-                  fontWeight: isSelected ? 500 : 400,
-                  transition: 'color 0.17s',
-                  lineHeight: 1.45,
-                }}
-              >
-                {question.options[opt]}
-              </span>
-              {isSelected && (
-                <span style={{ marginLeft: 'auto', fontSize: 14, color: color.base }}>✓</span>
-              )}
-            </motion.button>
-          );
-        })}
-      </div>
+                <span
+                  className="serif"
+                  style={{
+                    width: 34, height: 34, minWidth: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 17, fontStyle: 'italic',
+                    border: `1px solid ${isSelected ? 'transparent' : 'var(--line-2)'}`,
+                    background: isSelected ? 'linear-gradient(135deg, #f6e6bd, #d6b67a 50%, #a8834b)' : 'transparent',
+                    color: isSelected ? '#140f08' : 'var(--ink-2)',
+                    transition: 'all 0.45s var(--ease-lux)',
+                  }}
+                >
+                  {opt}
+                </span>
+                <span style={{ flex: 1, fontSize: 15, lineHeight: 1.55, color: isSelected ? 'var(--ink)' : 'var(--ink-2)', fontWeight: isSelected ? 500 : 400, transition: 'color 0.3s' }}>
+                  {question.options[opt]}
+                </span>
+                <AnimatePresence>
+                  {isSelected && (
+                    <motion.span initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.6 }} style={{ color: 'var(--gold)', display: 'flex' }}>
+                      <Icon name="check" size={18} stroke={1.5} />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Unanswered warning */}
-      {showError && !selected && (
-        <motion.p
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--danger)', fontWeight: 500 }}
-        >
-          ⚠ Please select an answer before submitting
-        </motion.p>
-      )}
-    </motion.div>
+        {flagged && (
+          <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} style={{ margin: '14px 0 0', fontSize: 12.5, color: 'var(--ruby)', letterSpacing: '0.04em' }}>
+            Please choose an answer before submitting.
+          </motion.p>
+        )}
+      </div>
+    </motion.article>
   );
 }

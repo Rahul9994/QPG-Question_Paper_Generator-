@@ -2,7 +2,69 @@ const KEYS = {
   DARK_MODE: 'qpg_dark_mode',
   ACTIVE_PAPER: 'qpg_active_paper',
   QUIZ_RESULTS: 'qpg_quiz_results',
+  ARCHIVE: 'qpg_archive',
 };
+
+// ─── Archive (every composed paper, newest first) ──────────
+// Kept per browser, so visitors of a public deployment each have their own.
+export function getArchive() {
+  try {
+    const raw = localStorage.getItem(KEYS.ARCHIVE);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeArchive(list) {
+  try {
+    localStorage.setItem(KEYS.ARCHIVE, JSON.stringify(list));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function newId() {
+  return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function addToArchive({ title, topic, difficulty, count, questions }) {
+  const paper = {
+    id: newId(),
+    title,
+    topic,
+    difficulty,
+    count: Number(count),
+    questions,
+    bestScore: null,
+    attempts: 0,
+    createdAt: new Date().toISOString(),
+  };
+  writeArchive([paper, ...getArchive()]);
+  return paper;
+}
+
+/** Count an attempt and keep the best score. Returns the updated paper. */
+export function recordAttempt(id, score) {
+  let updated = null;
+  writeArchive(
+    getArchive().map((p) => {
+      if (p.id !== id) return p;
+      updated = {
+        ...p,
+        attempts: (p.attempts || 0) + 1,
+        bestScore: p.bestScore === null || score > p.bestScore ? score : p.bestScore,
+      };
+      return updated;
+    })
+  );
+  return updated;
+}
+
+export function removeFromArchive(id) {
+  writeArchive(getArchive().filter((p) => p.id !== id));
+}
 
 // ─── Dark Mode ─────────────────────────────────────────────
 export function getDarkMode() {
