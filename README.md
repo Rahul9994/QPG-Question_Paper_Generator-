@@ -1,6 +1,6 @@
 # 🧠 QPG — AI Question Paper Generator
 
-Generate high-quality multiple-choice question papers on any topic in seconds, powered by **OpenRouter AI**. Supports GPT-4o, Claude, Gemini, Llama, and 100+ other models via a single API key.
+Generate high-quality multiple-choice question papers on any topic in seconds, powered by **Groq**. The backend reads the models your Groq key can use and automatically picks the best free one (currently GPT-OSS 120B), falling back to the next best if a model is rate-limited or retired.
 
 ---
 
@@ -19,7 +19,7 @@ The AI Question Paper Generator dashboard allows users to:
 - Select a topic or use quick topic chips
 - Choose difficulty level (Easy, Medium, Hard)
 - Select the number of questions
-- Generate MCQ papers instantly using OpenRouter AI
+- Generate MCQ papers instantly using the best free Groq model
 - Access previously generated papers
 - Toggle between Dark and Light modes
 
@@ -27,13 +27,16 @@ The AI Question Paper Generator dashboard allows users to:
 
 ## ✨ Features
 
-- **OpenRouter-powered MCQ generation** — switch model with one env var
+- **Cinematic hero film** — a 15-second, 60fps WebGL motion-graphics reel rendered live (five chapters, seamless loop, timecode scrubber)
+- **Scroll choreography** — Lenis smooth scrolling, masked headline reveals, scroll-scrubbed manifesto, a pinned "Method" chapter, velocity marquee, parallax footer
+- **Groq auto model selection** — ranks the live model list for your key, with automatic fallback on rate limits or retired models
+- **Noir & Ivory themes** — black/champagne-gold and ivory/bronze, with film grain and a custom cursor
 - **10 quick-topic chips** (Python, React, DSA, SQL, ML, and more)
 - **3 difficulty levels** — Easy, Medium, Hard
 - **4 question counts** — 5, 10, 15, 20 questions
 - **Full quiz experience** — live progress bar, timer, floating submit
 - **Animated score screen** — ring counter, grade badge, per-question review
-- **Persistent storage** — past papers in `db.json`; best scores tracked
+- **Private archive** — papers and best scores are kept in each visitor's browser (`localStorage`), so a public deployment never mixes users
 - **Dark / Light mode** toggle (persisted to `localStorage`)
 - **Framer Motion** transitions throughout
 
@@ -45,28 +48,32 @@ The AI Question Paper Generator dashboard allows users to:
 |----------|-----------|
 | Frontend | React 19 + Vite 6 |
 | Styling  | Tailwind CSS v4 + CSS Variables |
-| Animation| Framer Motion |
+| Animation| Framer Motion + Lenis smooth scroll |
+| Hero film| WebGL2 (custom shaders, no 3D library) |
 | HTTP     | Axios |
 | Toasts   | React Hot Toast |
 | Routing  | React Router v7 |
 | Backend  | Node.js + Express.js |
-| AI       | OpenRouter API (OpenAI-compatible) |
-| Storage  | JSON file (`db.json`) |
-| IDs      | nanoid |
+| AI       | Groq API (OpenAI-compatible), auto-selected model |
+| Storage  | Browser `localStorage` (per visitor) |
+| Hosting  | Vercel (static CDN + one serverless function) |
 
 ---
 
 ## 📁 Project Structure
 
 ```
-question-paper-generator/
+QPG-Question_Paper_Generator-/
+├── api/index.js             ← Vercel function: wraps the Express app
+├── vercel.json              ← build, output and rewrites for Vercel
+├── package.json             ← root build script + function dependencies
 ├── backend/
-│   ├── server.js            ← Express app, port 5000
-│   ├── .env                 ← API key (create from .env.example)
-│   ├── db.json              ← JSON database for saved papers
+│   ├── app.js               ← Express app (shared by local server + Vercel)
+│   ├── server.js            ← local server, port 5000
+│   ├── .env                 ← GROQ_API_KEY (copy from .env.example)
+│   ├── lib/groq.js          ← model ranking, fallback, JSON calls
 │   └── routes/
-│       ├── generate.js      ← POST /api/generate → calls OpenRouter
-│       └── papers.js        ← CRUD for saved papers
+│       └── generate.js      ← POST /api/generate → calls Groq (rate limited)
 │
 └── frontend/
     ├── index.html
@@ -77,7 +84,10 @@ question-paper-generator/
         ├── App.jsx
         ├── index.css
         ├── api/axios.js
-        ├── components/      ← Navbar, QuestionCard, Timer, etc.
+        ├── film/            ← the 15s WebGL hero reel (timeline, formations, renderer)
+        ├── sections/        ← Manifesto, Atelier, Archive, Method, Marquee, Footer
+        ├── lib/             ← Lenis smooth-scroll helpers
+        ├── components/      ← HeroFilm, Navbar, Preloader, Cursor, QuestionCard, etc.
         ├── pages/           ← Home, Quiz, Score
         ├── hooks/           ← useQuiz, useTimer
         └── utils/storage.js
@@ -90,15 +100,15 @@ question-paper-generator/
 ### Prerequisites
 
 - Node.js **18+** (native `fetch` required — no extra packages needed)
-- An **OpenRouter API key** — get one free at [openrouter.ai/keys](https://openrouter.ai/keys)
+- A free **Groq API key** — get one at [console.groq.com/keys](https://console.groq.com/keys)
 
 ---
 
-### 1. Unzip the project
+### 1. Clone the project
 
 ```bash
-unzip question-paper-generator.zip
-cd question-paper-generator
+git clone https://github.com/Rahul9994/QPG-Question_Paper_Generator-.git
+cd QPG-Question_Paper_Generator-
 ```
 
 ---
@@ -114,10 +124,11 @@ cp .env.example .env
 Edit `.env` and add your key:
 
 ```env
-OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPENROUTER_MODEL=openai/gpt-4o-mini
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 PORT=5000
 ```
+
+A `GROQ_API_KEY` set in your system environment also works (it takes precedence over `.env`).
 
 Start the backend:
 
@@ -142,26 +153,24 @@ Open **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
-## 🤖 Supported Models (via `OPENROUTER_MODEL`)
+## 🤖 Automatic model selection
 
-| Model ID | Speed | Cost | Notes |
-|----------|-------|------|-------|
-| `openai/gpt-4o-mini` | Fast | Low | Default — great for MCQs |
-| `openai/gpt-4o` | Fast | Medium | Higher accuracy |
-| `anthropic/claude-3.5-sonnet` | Fast | Medium | Excellent explanations |
-| `anthropic/claude-3-haiku` | Very Fast | Very Low | Budget option |
-| `google/gemini-flash-1.5` | Very Fast | Very Low | Good alternative |
-| `meta-llama/llama-3.1-8b-instruct:free` | Fast | **Free** | Free tier |
+You don't pick a model. On each request the backend:
 
-Browse all models at [openrouter.ai/models](https://openrouter.ai/models).
+1. Lists the models your key can use (`GET /openai/v1/models`, cached 30 min).
+2. Drops non-chat models (Whisper, TTS, guard/safeguard, compound systems).
+3. Ranks the rest: GPT-OSS 120B → MiniMax M2 → Qwen 3.x → Kimi K2 → Llama 3.3 70B → … → GPT-OSS 20B → Llama 3.1 8B. Newer point releases of a family rank higher, and unknown future models are ranked by parameter count.
+4. Tries the best one. If it is rate-limited (429), retired (404), or returns an unusable paper, it moves to the next (up to 4 models).
+
+`GET /api/model` shows the current pick. To pin a model, set `GROQ_MODEL=<model id>` in `.env`; it goes to the front of the list and the fallbacks stay in place.
 
 ---
 
 ## 🔑 .env Example
 
 ```env
-OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPENROUTER_MODEL=openai/gpt-4o-mini
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# GROQ_MODEL=openai/gpt-oss-120b   # optional pin
 PORT=5000
 ```
 
@@ -186,16 +195,25 @@ PORT=5000
 
 ---
 
+## ☁️ Deploy (Vercel)
+
+The repo deploys to Vercel as-is: the built frontend is served from the CDN and `/api/*` runs as one serverless function (`api/index.js`).
+
+1. Go to [vercel.com/new](https://vercel.com/new), sign in with GitHub and **Import** this repository. Leave every build setting at its default (`vercel.json` supplies them).
+2. Under **Environment Variables** add `GROQ_API_KEY` with your key (optionally `GROQ_MODEL` to pin a model, or `GENERATE_LIMIT_PER_15MIN` to change the per-visitor limit, default 12).
+3. Click **Deploy**. Every push to `main` redeploys automatically.
+
+`/api/generate` is rate limited per visitor, because everyone on a public deployment shares your Groq key.
+
+---
+
 ## 🌐 API Endpoints
 
 | Method | Endpoint           | Description                           |
 |--------|--------------------|---------------------------------------|
 | GET    | `/api/health`      | Health check                          |
-| POST   | `/api/generate`    | Generate MCQs via OpenRouter          |
-| GET    | `/api/papers`      | Fetch all saved papers                |
-| POST   | `/api/papers`      | Save a new paper                      |
-| PATCH  | `/api/papers/:id`  | Update best score + increment attempts|
-| DELETE | `/api/papers/:id`  | Delete a paper                        |
+| GET    | `/api/model`       | Model the auto-selector would use now |
+| POST   | `/api/generate`    | Generate MCQs via Groq                |
 
 ### POST `/api/generate` body
 
@@ -211,17 +229,17 @@ PORT=5000
 
 ## 🐛 Troubleshooting
 
-**"OPENROUTER_API_KEY is not configured"**
-→ Create `.env` inside the `backend/` folder (not the project root).
+**"GROQ_API_KEY is not configured"**
+→ Create `.env` inside the `backend/` folder (not the project root) and restart the backend.
 
-**HTTP 402 / insufficient credits**
-→ Add credits at [openrouter.ai/credits](https://openrouter.ai/credits), or switch to a free model.
+**"GROQ_API_KEY was rejected by Groq (401)"**
+→ The key is wrong or revoked; create a new one at [console.groq.com/keys](https://console.groq.com/keys).
 
-**HTTP 404 / model not found**
-→ Check your `OPENROUTER_MODEL` value matches exactly what's listed at [openrouter.ai/models](https://openrouter.ai/models).
+**"All Groq models failed…"**
+→ Usually free-tier rate limits. Wait a minute, or request fewer questions. The `attempts` field in the error response shows why each model failed.
 
-**"Failed to parse AI response"**
-→ Some models occasionally add extra text. Try `openai/gpt-4o-mini` or `anthropic/claude-3.5-sonnet` for most reliable JSON output.
+**The hero film is a static gradient**
+→ Your browser has no WebGL2. With "reduce motion" switched on in your OS, the film shows a single still frame on purpose.
 
 **Port already in use**
 → Set `PORT=5001` in `.env` and update `vite.config.js` proxy target to match.

@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { lockScroll } from '../lib/smoothScroll.js';
+
+const EASE = [0.16, 1, 0.3, 1];
 
 export default function ConfirmModal({ isOpen, onConfirm, onCancel, answered, total }) {
   // Close on Escape
@@ -12,109 +15,63 @@ export default function ConfirmModal({ isOpen, onConfirm, onCancel, answered, to
 
   // Prevent body scroll
   useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (!isOpen) return undefined;
+    lockScroll(true);
+    return () => lockScroll(false);
   }, [isOpen]);
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.5, ease: EASE }}
+          onClick={onCancel}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 500, padding: 20,
+            background: 'rgba(3,3,4,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onCancel}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirm-title"
+            onClick={(e) => e.stopPropagation()}
+            initial={{ opacity: 0, y: 30, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.97 }}
+            transition={{ duration: 0.7, ease: EASE }}
             style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 500,
-              background: 'rgba(0,0,0,0.7)',
-              backdropFilter: 'blur(4px)',
-            }}
-          />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.88, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.88, y: 20 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 380 }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 501,
-              width: '90%',
-              maxWidth: 420,
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 32,
-              boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+              width: '100%', maxWidth: 480, background: 'var(--bg-solid)', border: '1px solid var(--line-2)',
+              borderRadius: 'var(--radius-lg)', padding: 'clamp(28px, 5vw, 48px)', textAlign: 'center',
+              boxShadow: '0 40px 120px rgba(0,0,0,0.6)',
             }}
           >
-            {/* Icon */}
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 14,
-                background: 'rgba(245,158,11,0.12)',
-                border: '1px solid rgba(245,158,11,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 24,
-                margin: '0 auto 20px',
-              }}
-            >
-              📋
-            </div>
-
-            <h3
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 20,
-                fontWeight: 700,
-                color: 'var(--text)',
-                textAlign: 'center',
-                margin: '0 0 10px',
-              }}
-            >
-              Submit Test?
+            <p className="eyebrow" style={{ margin: '0 0 22px' }}>Final submission</p>
+            <h3 id="confirm-title" className="serif" style={{ fontSize: 44, fontWeight: 300, color: 'var(--ink)', margin: '0 0 18px' }}>
+              Submit your <em className="metal-text">paper?</em>
             </h3>
-
-            <p style={{ color: 'var(--text-dim)', fontSize: 14, textAlign: 'center', margin: '0 0 24px', lineHeight: 1.6 }}>
-              You've answered <strong style={{ color: 'var(--text)' }}>{answered}/{total}</strong> questions.
+            <p style={{ color: 'var(--ink-2)', fontSize: 14.5, margin: '0 0 34px', lineHeight: 1.7 }}>
+              You have answered <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{answered} of {total}</strong> questions.
               {answered < total && (
-                <> You have <strong style={{ color: 'var(--warning)' }}>{total - answered} unanswered</strong>.</>
+                <> <strong style={{ color: 'var(--amber)', fontWeight: 600 }}>{total - answered} remain unanswered.</strong></>
               )}
-              <br />This action cannot be undone.
+              <br />Once submitted, the paper is marked and cannot be changed.
             </p>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={onCancel}
-                className="btn-ghost"
-                style={{ flex: 1 }}
-              >
-                Review First
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={onCancel} className="btn-line" style={{ flex: '1 1 160px' }}>
+                Review first
               </button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={onConfirm}
-                className="btn-primary"
-                style={{ flex: 1 }}
-              >
-                Submit ✓
-              </motion.button>
+              <button onClick={onConfirm} className="btn-gold" style={{ flex: '1 1 160px' }}>
+                Submit
+              </button>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

@@ -4,12 +4,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getQuizResults, clearQuizResults, getActivePaper } from '../utils/storage.js';
 import { formatSeconds } from '../hooks/useTimer.js';
+import Icon from '../components/Icon.jsx';
+import { Reveal } from '../components/Reveal.jsx';
+
+const EASE = [0.16, 1, 0.3, 1];
 
 const GRADES = [
-  { min: 80, label: 'Excellent!',        color: '#10b981', bg: 'rgba(16,185,129,0.12)',  emoji: '🏆' },
-  { min: 60, label: 'Good Job!',          color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',   emoji: '🎯' },
-  { min: 40, label: 'Average',            color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  emoji: '📈' },
-  { min: 0,  label: 'Needs Improvement',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   emoji: '💪' },
+  { min: 80, label: 'Distinction',     color: 'var(--emerald)' },
+  { min: 60, label: 'Merit',           color: 'var(--azure)' },
+  { min: 40, label: 'Pass',            color: 'var(--amber)' },
+  { min: 0,  label: 'Keep practising', color: 'var(--ruby)' },
 ];
 
 function getGrade(score) {
@@ -33,18 +37,18 @@ export default function Score() {
     animateScore(saved.score);
   }, []); // eslint-disable-line
 
+  // Counts up in step with the ring (2s, after a 0.3s beat)
   function animateScore(target) {
-    const duration = 1400;
-    const start = Date.now();
+    const duration = 2000;
+    const start = Date.now() + 300;
     const tick = () => {
-      const elapsed = Date.now() - start;
+      const elapsed = Math.max(Date.now() - start, 0);
       const progress = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+      const ease = 1 - Math.pow(1 - progress, 4);
       setDisplayScore(Math.round(ease * target));
       if (progress < 1) animRef.current = requestAnimationFrame(tick);
     };
     animRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animRef.current);
   }
 
   useEffect(() => {
@@ -60,406 +64,219 @@ export default function Score() {
 
   function handleNewPaper() {
     clearQuizResults();
-    navigate('/');
+    navigate('/#atelier');
   }
 
   function handleCopyScore() {
     if (!results) return;
     const grade = getGrade(results.score);
     const text =
-      `📊 QPG Quiz Results\n` +
-      `Topic: ${results.title || results.topic}\n` +
-      `Score: ${results.score}% — ${grade.label} ${grade.emoji}\n` +
-      `✅ Correct: ${results.correct}/${results.total}\n` +
-      `⏱ Time: ${formatSeconds(results.elapsedSeconds)}\n` +
-      `Difficulty: ${results.difficulty}`;
-    navigator.clipboard.writeText(text).then(() => toast.success('Score copied!')).catch(() => toast.error('Copy failed'));
+      `QPG — Results\n` +
+      `Paper: ${results.title || results.topic}\n` +
+      `Score: ${results.score}% — ${grade.label}\n` +
+      `Correct: ${results.correct}/${results.total}\n` +
+      `Time: ${formatSeconds(results.elapsedSeconds)}\n` +
+      `Calibre: ${results.difficulty}`;
+    navigator.clipboard.writeText(text).then(() => toast.success('Result copied')).catch(() => toast.error('Copy failed'));
   }
 
   if (!results) return null;
 
   const grade = getGrade(results.score);
-  const circumference = 2 * Math.PI * 52;
+  const R = 90;
+  const circumference = 2 * Math.PI * R;
   const dashOffset = circumference - (results.score / 100) * circumference;
 
+  const stats = [
+    { label: 'Correct', value: results.correct, color: 'var(--emerald)' },
+    { label: 'Incorrect', value: results.wrong, color: 'var(--ruby)' },
+    { label: 'Questions', value: results.total, color: 'var(--ink)' },
+    { label: 'Time', value: formatSeconds(results.elapsedSeconds), color: 'var(--gold)' },
+  ];
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      style={{ maxWidth: 780, margin: '0 auto', padding: '40px 20px 80px' }}
-    >
-      {/* ── Score hero ───────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        style={{ textAlign: 'center', marginBottom: 40 }}
-      >
-        {/* Ring */}
-        <div style={{ position: 'relative', width: 140, height: 140, margin: '0 auto 20px' }}>
-          <svg width="140" height="140" style={{ transform: 'rotate(-90deg)' }}>
-            {/* Track */}
-            <circle cx="70" cy="70" r="52" fill="none" stroke="var(--border)" strokeWidth="9" />
-            {/* Progress */}
+    <div className="wrap-narrow" style={{ padding: 'calc(var(--nav-h) + clamp(50px, 8vw, 100px)) clamp(16px, 4vw, 40px) 120px' }}>
+      {/* ── Result ─────────────────────────────────── */}
+      <div style={{ textAlign: 'center', marginBottom: 'clamp(60px, 8vw, 100px)' }}>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.1 }} className="eyebrow" style={{ margin: '0 0 36px' }}>
+          The result
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.4, ease: EASE }}
+          style={{ position: 'relative', width: 'min(280px, 72vw)', aspectRatio: '1', margin: '0 auto 34px' }}
+        >
+          <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+            <defs>
+              <linearGradient id="ring-gold" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#f6e6bd" />
+                <stop offset="50%" stopColor="#d6b67a" />
+                <stop offset="100%" stopColor="#8f6d3d" />
+              </linearGradient>
+            </defs>
+            <circle cx="100" cy="100" r={R} fill="none" stroke="var(--line)" strokeWidth="1" />
+            <circle cx="100" cy="100" r={R - 10} fill="none" stroke="var(--line)" strokeWidth="0.5" strokeDasharray="1 3" />
             <motion.circle
-              cx="70" cy="70" r="52"
+              cx="100" cy="100" r={R}
               fill="none"
-              stroke={grade.color}
-              strokeWidth="9"
+              stroke="url(#ring-gold)"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeDasharray={circumference}
               initial={{ strokeDashoffset: circumference }}
               animate={{ strokeDashoffset: dashOffset }}
-              transition={{ duration: 1.4, ease: [0.34, 1.56, 0.64, 1] }}
-              style={{ filter: `drop-shadow(0 0 8px ${grade.color}66)` }}
+              transition={{ duration: 2, ease: EASE, delay: 0.3 }}
+              style={{ filter: 'drop-shadow(0 0 6px rgba(214,182,122,0.5))' }}
             />
           </svg>
-          {/* Center score */}
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 30,
-                fontWeight: 800,
-                color: grade.color,
-                lineHeight: 1,
-              }}
-            >
-              {displayScore}%
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span className="serif tabular" style={{ fontSize: 'clamp(64px, 16vw, 96px)', fontWeight: 300, lineHeight: 1, color: 'var(--ink)' }}>
+              {displayScore}<span style={{ fontSize: '0.45em', color: 'var(--gold)' }}>%</span>
             </span>
           </div>
-        </div>
-
-        {/* Grade badge */}
-        <motion.div
-          initial={{ scale: 0.7, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.8, type: 'spring', stiffness: 300 }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 22px',
-            borderRadius: 100,
-            background: grade.bg,
-            border: `1px solid ${grade.color}44`,
-            marginBottom: 14,
-          }}
-        >
-          <span style={{ fontSize: 20 }}>{grade.emoji}</span>
-          <span
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 17,
-              color: grade.color,
-            }}
-          >
-            {grade.label}
-          </span>
         </motion.div>
 
-        {results.title && (
-          <p style={{ margin: '0 0 6px', fontSize: 15, color: 'var(--text-dim)', fontWeight: 500 }}>
-            {results.title}
-          </p>
-        )}
-      </motion.div>
-
-      {/* ── Stats row ────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.4 }}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 12,
-          marginBottom: 36,
-        }}
-      >
-        {[
-          { label: 'Correct', value: results.correct, icon: '✅', color: 'var(--success)' },
-          { label: 'Wrong',   value: results.wrong,   icon: '❌', color: 'var(--danger)' },
-          { label: 'Total',   value: results.total,   icon: '📋', color: 'var(--primary)' },
-          { label: 'Time',    value: formatSeconds(results.elapsedSeconds), icon: '⏱', color: 'var(--cyan)' },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="card"
-            style={{
-              padding: '16px 18px',
-              textAlign: 'center',
-              borderColor: `${stat.color}30`,
-            }}
-          >
-            <div style={{ fontSize: 22, marginBottom: 6 }}>{stat.icon}</div>
-            <div
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 22,
-                fontWeight: 800,
-                color: stat.color,
-                lineHeight: 1,
-                marginBottom: 4,
-              }}
-            >
-              {stat.value}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-              {stat.label}
-            </div>
-          </div>
-        ))}
-      </motion.div>
-
-      {/* ── Action buttons ───────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 44 }}
-      >
-        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleRetake} className="btn-primary" style={{ flex: '1 1 140px' }}>
-          🔄 Retake Test
-        </motion.button>
-        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleNewPaper} className="btn-ghost" style={{ flex: '1 1 140px' }}>
-          ➕ New Paper
-        </motion.button>
-        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={handleCopyScore} className="btn-ghost" style={{ flex: '1 1 140px' }}>
-          📋 Copy Score
-        </motion.button>
-      </motion.div>
-
-      {/* ── Review accordion ─────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        <h2
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 18,
-            fontWeight: 700,
-            color: 'var(--text)',
-            marginBottom: 16,
-          }}
+        <motion.h1
+          initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 1.2, ease: EASE, delay: 1 }}
+          className="serif"
+          style={{ fontSize: 'clamp(46px, 7vw, 84px)', fontWeight: 300, fontStyle: 'italic', color: grade.color, margin: '0 0 14px', lineHeight: 1 }}
         >
-          Question Review
-        </h2>
+          {grade.label}
+        </motion.h1>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {results.review?.map((q, i) => (
-            <ReviewItem
-              key={q.id}
-              q={q}
-              index={i}
-              isExpanded={expandedId === q.id}
-              onToggle={() => setExpandedId(expandedId === q.id ? null : q.id)}
-            />
-          ))}
+        {results.title && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3, duration: 1 }} style={{ margin: 0, fontSize: 15, color: 'var(--ink-2)' }}>
+            {results.title}
+          </motion.p>
+        )}
+      </div>
+
+      {/* ── Stats ──────────────────────────────────── */}
+      <div className="stats" style={{ marginBottom: 'clamp(40px, 6vw, 60px)' }}>
+        {stats.map((s, i) => (
+          <Reveal key={s.label} delay={0.4 + i * 0.08} className="stat-cell">
+            <div className="serif tabular" style={{ fontSize: 'clamp(44px, 5vw, 64px)', fontWeight: 300, lineHeight: 1, color: s.color }}>{s.value}</div>
+            <p className="eyebrow-dim" style={{ margin: '14px 0 0' }}>{s.label}</p>
+          </Reveal>
+        ))}
+      </div>
+
+      {/* ── Actions ────────────────────────────────── */}
+      <Reveal delay={0.5}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 'clamp(70px, 10vw, 120px)' }}>
+          <button onClick={handleRetake} className="btn-gold" style={{ flex: '1 1 180px' }}>
+            <Icon name="refresh" size={15} /> Retake paper
+          </button>
+          <button onClick={handleNewPaper} className="btn-line" style={{ flex: '1 1 180px' }}>
+            <Icon name="plus" size={15} /> New paper
+          </button>
+          <button onClick={handleCopyScore} className="btn-line" style={{ flex: '1 1 180px' }}>
+            <Icon name="copy" size={15} /> Copy result
+          </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </Reveal>
+
+      {/* ── Review ─────────────────────────────────── */}
+      <Reveal>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, marginBottom: 26, flexWrap: 'wrap' }}>
+          <h2 className="serif" style={{ fontSize: 'clamp(36px, 4.4vw, 56px)', fontWeight: 300, color: 'var(--ink)' }}>
+            The <em className="metal-text">review</em>
+          </h2>
+          <span className="eyebrow-dim">Select a question to expand</span>
+        </div>
+      </Reveal>
+
+      <div style={{ borderBottom: '1px solid var(--line)' }}>
+        {results.review?.map((q, i) => (
+          <ReviewItem
+            key={q.id}
+            q={q}
+            index={i}
+            isExpanded={expandedId === q.id}
+            onToggle={() => setExpandedId(expandedId === q.id ? null : q.id)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
 function ReviewItem({ q, index, isExpanded, onToggle }) {
+  const tone = q.isCorrect ? 'var(--emerald)' : 'var(--ruby)';
   return (
     <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03 + 0.4 }}
-      className="card"
-      style={{
-        overflow: 'hidden',
-        borderColor: q.isCorrect ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)',
-      }}
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ duration: 0.9, ease: EASE, delay: (index % 6) * 0.04 }}
+      style={{ borderTop: '1px solid var(--line)' }}
     >
-      {/* Header (always visible) */}
       <button
         onClick={onToggle}
-        style={{
-          width: '100%',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '14px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          textAlign: 'left',
-        }}
+        aria-expanded={isExpanded}
+        style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '22px 0', display: 'flex', alignItems: 'center', gap: 18, textAlign: 'left' }}
       >
-        {/* Status icon */}
-        <span
-          style={{
-            width: 28,
-            height: 28,
-            minWidth: 28,
-            borderRadius: 7,
-            background: q.isCorrect ? 'var(--success-bg)' : 'var(--danger-bg)',
-            border: `1px solid ${q.isCorrect ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 13,
-          }}
-        >
-          {q.isCorrect ? '✓' : '✗'}
+        <span style={{ width: 30, height: 30, minWidth: 30, borderRadius: '50%', border: `1px solid ${tone}`, color: tone, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={q.isCorrect ? 'check' : 'x'} size={14} stroke={1.5} />
         </span>
-
-        {/* Question # */}
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: 'var(--text-muted)',
-            minWidth: 28,
-          }}
-        >
-          Q{index + 1}
+        <span className="serif tabular" style={{ fontSize: 18, fontStyle: 'italic', color: 'var(--ink-3)', minWidth: 28 }}>
+          {String(index + 1).padStart(2, '0')}
         </span>
-
-        {/* Question text (truncated) */}
-        <span
-          style={{
-            flex: 1,
-            fontSize: 14,
-            color: 'var(--text)',
-            fontWeight: 500,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <span style={{ flex: 1, minWidth: 0, fontSize: 15, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: isExpanded ? 'normal' : 'nowrap' }}>
           {q.question}
         </span>
-
-        {/* Expand icon */}
-        <motion.span
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          style={{ fontSize: 12, color: 'var(--text-muted)', flexShrink: 0 }}
-        >
-          ▼
+        <motion.span animate={{ rotate: isExpanded ? 180 : 0 }} transition={{ duration: 0.5, ease: EASE }} style={{ color: 'var(--ink-3)', display: 'flex' }}>
+          <Icon name="chevron" size={16} />
         </motion.span>
       </button>
 
-      {/* Expanded content */}
       <AnimatePresence initial={false}>
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.6, ease: EASE }}
+            style={{ overflow: 'hidden' }}
           >
-            <div
-              style={{
-                padding: '0 18px 18px',
-                borderTop: '1px solid var(--border-muted)',
-                paddingTop: 14,
-              }}
-            >
-              {/* Full question */}
-              <p style={{ margin: '0 0 14px', fontSize: 14, color: 'var(--text)', lineHeight: 1.55 }}>
-                {q.question}
-              </p>
-
-              {/* Options */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+            <div style={{ padding: '0 0 28px clamp(0px, 6vw, 48px)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
                 {Object.entries(q.options).map(([opt, text]) => {
                   const isCorrect = opt === q.correct;
-                  const isChosen  = opt === q.chosen;
-                  const wrongChoice = isChosen && !isCorrect;
-
-                  let bg = 'var(--bg-surface)';
-                  let border = 'var(--border-muted)';
-                  let textColor = 'var(--text-dim)';
-
-                  if (isCorrect) {
-                    bg = 'var(--success-bg)';
-                    border = 'rgba(16,185,129,0.4)';
-                    textColor = 'var(--text)';
-                  } else if (wrongChoice) {
-                    bg = 'var(--danger-bg)';
-                    border = 'rgba(239,68,68,0.4)';
-                    textColor = 'var(--text)';
-                  }
-
+                  const wrongChoice = opt === q.chosen && !isCorrect;
+                  const c = isCorrect ? 'var(--emerald)' : wrongChoice ? 'var(--ruby)' : null;
                   return (
                     <div
                       key={opt}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        padding: '8px 12px',
-                        borderRadius: 8,
-                        background: bg,
-                        border: `1px solid ${border}`,
-                        fontSize: 13,
+                        display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 'var(--radius)',
+                        border: `1px solid ${c ? `color-mix(in srgb, ${c} 45%, transparent)` : 'var(--line)'}`,
+                        background: isCorrect ? 'var(--emerald-bg)' : wrongChoice ? 'var(--ruby-bg)' : 'transparent',
+                        fontSize: 14,
                       }}
                     >
-                      <span
-                        style={{
-                          width: 22,
-                          height: 22,
-                          minWidth: 22,
-                          borderRadius: 5,
-                          background: isCorrect ? 'var(--success)' : wrongChoice ? 'var(--danger)' : 'var(--bg-card)',
-                          color: (isCorrect || wrongChoice) ? '#fff' : 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: 11,
-                          fontFamily: 'var(--font-display)',
-                        }}
-                      >
-                        {opt}
-                      </span>
-                      <span style={{ color: textColor, flex: 1 }}>{text}</span>
-                      {isCorrect && <span style={{ color: 'var(--success)', fontSize: 13 }}>✓ Correct</span>}
-                      {wrongChoice && <span style={{ color: 'var(--danger)', fontSize: 13 }}>✗ Your answer</span>}
+                      <span className="serif" style={{ fontStyle: 'italic', fontSize: 17, minWidth: 16, color: c || 'var(--ink-3)' }}>{opt}</span>
+                      <span style={{ flex: 1, color: c ? 'var(--ink)' : 'var(--ink-2)' }}>{text}</span>
+                      {isCorrect && <span className="eyebrow-dim" style={{ color: 'var(--emerald)' }}>Correct</span>}
+                      {wrongChoice && <span className="eyebrow-dim" style={{ color: 'var(--ruby)' }}>Your answer</span>}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Explanation */}
               {q.explanation && (
-                <div
-                  style={{
-                    padding: '12px 14px',
-                    borderRadius: 8,
-                    background: 'var(--primary-soft)',
-                    border: '1px solid rgba(99,102,241,0.2)',
-                  }}
-                >
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                    <strong style={{ color: 'var(--primary)' }}>💡 Explanation: </strong>
-                    {q.explanation}
-                  </p>
+                <div style={{ paddingLeft: 18, borderLeft: '1px solid var(--gold)' }}>
+                  <p className="eyebrow" style={{ margin: '0 0 8px' }}>Explanation</p>
+                  <p className="serif" style={{ margin: 0, fontSize: 19, lineHeight: 1.5, color: 'var(--ink-2)' }}>{q.explanation}</p>
                 </div>
               )}
 
-              {/* Unanswered */}
               {!q.chosen && (
-                <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                  You did not answer this question.
-                </p>
+                <p style={{ margin: '14px 0 0', fontSize: 12.5, color: 'var(--ink-3)', fontStyle: 'italic' }}>You did not answer this question.</p>
               )}
             </div>
           </motion.div>

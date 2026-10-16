@@ -1,12 +1,71 @@
 import { Router } from 'express';
+import { generateJSON, GroqError, prettyName } from '../lib/groq.js';
 
 const router = Router();
 
-// Default model — change via OPENROUTER_MODEL in .env
-const DEFAULT_MODEL = 'openai/gpt-4o-mini';
+const LETTERS = ['A', 'B', 'C', 'D'];
 
-router.post('/', async (req, res) => {
-  const { topic, difficulty, count } = req.body;
+// A public deployment shares one Groq key, so cap generations per visitor.
+// In-memory: per server instance, which is enough to stop casual abuse.
+const RATE_WINDOW_MS = 15 * 60 * 1000;
+const RATE_MAX = Number(process.env.GENERATE_LIMIT_PER_15MIN) || 12;
+const hits = new Map(); // ip → timestamps
+
+function rateLimit(req, res, next) {
+  const now = Date.now();
+  const ip = req.ip || 'unknown';
+  const recent = (hits.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (recent.length >= RATE_MAX) {
+    const retryIn = Math.ceil((RATE_WINDOW_MS - (now - recent[0])) / 60000);
+    res.set('Retry-After', String(retryIn * 60));
+    return res.status(429).json({
+      error: 'Too many papers',
+      message: `You've composed ${RATE_MAX} papers in the last 15 minutes. Please try again in about ${retryIn} min.`,
+    });
+  }
+  recent.push(now);
+  hits.set(ip, recent);
+  if (hits.size > 5000) hits.clear();
+  next();
+}
+
+// Clean up the model's paper; throws if it isn't usable so the next model is tried.
+function normalizePaper(parsed, count) {
+  if (!parsed || typeof parsed.title !== 'string' || !Array.isArray(parsed.questions)) {
+    throw new Error('Invalid response structure from AI');
+  }
+
+  const questions = parsed.questions
+    .map((q) => {
+      let options = q?.options;
+      if (Array.isArray(options)) {
+        options = Object.fromEntries(options.slice(0, 4).map((text, i) => [LETTERS[i], String(text)]));
+      }
+      const correct = String(q?.correct ?? '').trim().charAt(0).toUpperCase();
+      if (!q?.question || !options || !LETTERS.every((l) => options[l]) || !LETTERS.includes(correct)) {
+        return null;
+      }
+      return {
+        question: String(q.question).trim(),
+        options: Object.fromEntries(LETTERS.map((l) => [l, String(options[l]).trim()])),
+        correct,
+        explanation: String(q.explanation || '').trim(),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, count)
+    .map((q, i) => ({ id: i + 1, ...q }));
+
+  if (questions.length < Math.ceil(count * 0.6)) {
+    throw new Error(`Only ${questions.length}/${count} usable questions`);
+  }
+
+  return { title: parsed.title.trim(), questions };
+}
+
+router.post('/', rateLimit, async (req, res) => {
+  const { difficulty, count } = req.body;
+  const topic = String(req.body.topic || '').trim().slice(0, 120);
 
   if (!topic || !difficulty || !count) {
     return res.status(400).json({
@@ -15,16 +74,16 @@ router.post('/', async (req, res) => {
     });
   }
 
-  if (!process.env.OPENROUTER_API_KEY) {
-    return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured' });
+  if (!['easy', 'medium', 'hard'].includes(String(difficulty).toLowerCase())) {
+    return res.status(400).json({ error: 'Invalid difficulty', message: 'Difficulty must be easy, medium or hard.' });
   }
 
-  const model = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
+  const n = Math.min(Math.max(parseInt(count, 10) || 10, 1), 20);
 
   const systemPrompt =
     'You are a technical MCQ generator. Return ONLY valid JSON. No markdown. No explanation. No code fences. No preamble.';
 
-  const userPrompt = `Generate ${count} ${difficulty}-level MCQ questions on: "${topic}"
+  const userPrompt = `Generate ${n} ${difficulty}-level MCQ questions on: "${topic}"
 
 Return ONLY this exact JSON structure (no markdown, no extra text):
 {
@@ -49,100 +108,28 @@ Rules:
 - Make questions practical and scenario-based
 - Ensure all 4 options are plausible but only 1 is correct
 - The "correct" field must be one of: "A", "B", "C", or "D"
+- Vary which letter is correct across questions
 - Explanations should be educational (1-3 sentences)
 - Vary question styles: conceptual, code-based, best-practice
-- Ensure ${count} total questions`;
+- Ensure ${n} total questions`;
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:5173',
-        'X-Title': 'QPG - AI Question Paper Generator',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 8192,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-      }),
+    const { data, model } = await generateJSON({
+      system: systemPrompt,
+      user: userPrompt,
+      // Kept under Groq's free-tier per-request token budget.
+      maxTokens: Math.min(1200 + n * 300, 7000),
+      validate: (parsed) => normalizePaper(parsed, n),
     });
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error('[OpenRouter HTTP Error]', response.status, errBody);
-      return res.status(502).json({
-        error: 'OpenRouter API request failed',
-        message: `HTTP ${response.status}: ${errBody}`,
-      });
-    }
-
-    const json = await response.json();
-
-    // Handle OpenRouter error payloads
-    if (json.error) {
-      console.error('[OpenRouter API Error]', json.error);
-      return res.status(502).json({
-        error: 'OpenRouter returned an error',
-        message: json.error.message || JSON.stringify(json.error),
-      });
-    }
-
-    let rawText = json.choices?.[0]?.message?.content?.trim();
-
-    if (!rawText) {
-      return res.status(502).json({
-        error: 'Empty response from OpenRouter',
-        message: 'The model returned no content. Try again or use a different model.',
-      });
-    }
-
-    // Strip any accidental markdown code fences
-    rawText = rawText
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
-
-    // Find JSON boundaries in case of any leading/trailing text
-    const jsonStart = rawText.indexOf('{');
-    const jsonEnd = rawText.lastIndexOf('}');
-    if (jsonStart !== -1 && jsonEnd !== -1) {
-      rawText = rawText.slice(jsonStart, jsonEnd + 1);
-    }
-
-    const parsed = JSON.parse(rawText);
-
-    // Validate structure
-    if (!parsed.title || !Array.isArray(parsed.questions)) {
-      throw new Error('Invalid response structure from AI');
-    }
-
-    if (parsed.questions.length === 0) {
-      throw new Error('AI returned no questions');
-    }
-
-    // Ensure IDs are sequential
-    parsed.questions = parsed.questions.map((q, i) => ({ ...q, id: i + 1 }));
-
-    res.json({ success: true, data: parsed });
+    res.json({ success: true, data, model: { id: model, label: prettyName(model) } });
   } catch (err) {
-    console.error('[Generate Error]', err.message);
-
-    if (err instanceof SyntaxError) {
-      return res.status(500).json({
-        error: 'Failed to parse AI response as valid JSON',
-        message: 'The model returned malformed data. Please try again.',
-      });
-    }
-
-    res.status(500).json({
+    const status = err instanceof GroqError ? err.status : 500;
+    console.error('[Generate Error]', err.message, err.details || '');
+    res.status(status).json({
       error: 'Failed to generate questions',
       message: err.message || 'Unexpected error occurred',
+      attempts: err.details,
     });
   }
 });
